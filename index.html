@@ -189,7 +189,7 @@ img{max-width:100%}
   <section class="panel" aria-labelledby="dHead">
     <h2 id="dHead">Your details</h2>
     <div class="grid2">
-      <label class="f"><span class="req">Your name</span><input type="text" id="name" list="staffList" autocomplete="off" placeholder="Start typing your name"></label>
+      <label class="f">Your name<input type="text" id="name" list="staffList" autocomplete="off" placeholder="Start typing your name"></label>
       <label class="f">Branch<input type="text" id="branch" list="branchList" autocomplete="off" placeholder="e.g. Harlow"></label>
     </div>
     <datalist id="staffList"></datalist>
@@ -339,7 +339,7 @@ const LOGO = document.querySelector(".logoLight").src;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid = () => Math.random().toString(36).slice(2,10);
-const lvlNum = l => l==="Whole book" ? 99 : (parseInt(String(l).replace(/\D/g,""))||0);
+const lvlNum = l => !l ? 100 : l==="Whole book" ? 99 : (parseInt(String(l).replace(/\D/g,""))||0);
 const hhmm = t => new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
 const isPhone = matchMedia("(pointer:coarse)").matches;
 const blank = () => ({name:"",branch:"",branchTyped:false,role:"",levels:[],points:[]});
@@ -417,15 +417,15 @@ function pointHTML(p,i){
       <div class="prio">${PRIOS.map(([l,c])=>`<label class="chip"><input type="radio" name="pr-${p.id}" value="${l}" ${p.priority===l?"checked":""}><span class="${c}">${l}</span></label>`).join("")}</div>
     </div>
     <div class="grid4">
-      <label class="f"><span class="req">Level</span>${sel("level",LEVELS,p.level,"Choose…")}</label>
-      <label class="f"><span class="req">Page</span><input type="text" inputmode="numeric" data-k="page" value="${esc(p.page)}" placeholder="e.g. 14"></label>
+      <label class="f">Level${sel("level",LEVELS,p.level,"Choose…")}</label>
+      <label class="f">Page<input type="text" inputmode="numeric" data-k="page" value="${esc(p.page)}" placeholder="e.g. 14"></label>
       <label class="f">Part of book${sel("part",PARTS,p.part)}</label>
       <label class="f">Issue type${sel("type",TYPES,p.type,"Choose…")}</label>
     </div>
     <label class="f">Exercise or example<span class="h">Be precise, e.g. "Ex 3, row 2, 4th word" or "Tip box, bottom left"</span><input type="text" dir="auto" data-k="exercise" value="${esc(p.exercise)}"></label>
     <div class="grid2">
-      <label class="f"><span class="req">What's wrong</span><textarea dir="auto" data-k="wrong" placeholder="Say exactly what you see">${esc(p.wrong)}</textarea></label>
-      <label class="f"><span class="req">Suggested fix</span><textarea dir="auto" data-k="fix" placeholder="Say exactly what it should be. Type the Arabic if you can.">${esc(p.fix)}</textarea></label>
+      <label class="f">What's wrong<textarea dir="auto" data-k="wrong" placeholder="Say exactly what you see">${esc(p.wrong)}</textarea></label>
+      <label class="f">Suggested fix<textarea dir="auto" data-k="fix" placeholder="Say exactly what it should be. Type the Arabic if you can.">${esc(p.fix)}</textarea></label>
     </div>
     <div class="photos">${p.photos.map(ph=>`<div class="ph"><img src="${ph.src}" alt="Photo for point ${i+1}"><span class="t">${hhmm(ph.taken)}</span><button type="button" data-del="${ph.id}" aria-label="Remove photo">×</button></div>`).join("")}
       <label class="addPh">${CAM}<span>Take photo</span><input type="file" accept="image/*" capture="environment"></label>
@@ -477,26 +477,21 @@ $("add").onclick=()=>addPoint();
 
 /* ---------- checks ---------- */
 function check(){
-  let first=null; const bad=el=>{ el.classList.add("invalid"); first=first||el; };
-  if(!S.name.trim()) bad($("name"));
-  S.points.forEach(p=>{ const el=$("points").querySelector(`[data-id="${p.id}"]`);
-    ["level","page","wrong","fix"].forEach(k=>{ if(!String(p[k]||"").trim()) bad(el.querySelector(`[data-k="${k}"]`)); }); });
   if(!S.points.length){ setStatus("Add at least one point first.","err"); return false; }
-  if(first){ first.scrollIntoView({behavior:"smooth",block:"center"}); setStatus("Fill in the boxes marked in red first.","err"); return false; }
   return true;
 }
 
 /* ---------- report blocks (used for the PDF and for Print) ---------- */
 function blocks(){
-  const pts=S.points.map((p,i)=>({...p,n:i+1})).sort((a,b)=>lvlNum(a.level)-lvlNum(b.level)||(parseFloat(a.page)||0)-(parseFloat(b.page)||0)||a.n-b.n);
-  const by={}; pts.forEach(p=>(by[p.level]||=[]).push(p));
+  const pts=S.points.map((p,i)=>({...p,n:i+1})).sort((a,b)=>lvlNum(a.level)-lvlNum(b.level)||(parseFloat(a.page)||9999)-(parseFloat(b.page)||9999)||a.n-b.n);
+  const by={}; pts.forEach(p=>(by[p.level||"No level given"]||=[]).push(p));
   const today=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
   const cnt=(g,l)=>g.filter(p=>p.priority===l).length;
   const out=[`<div class="pb first">
     <div class="brand"><div class="eb">Safar · Qaidah Review</div><img src="${LOGO}"></div>
     <h1>Qaidah Review Feedback</h1>
     <div class="meta">
-      <div>Reviewer</div><div><b>${esc(S.name)}</b>${S.role?` · ${esc(S.role)}`:""}${S.branch?` · ${esc(S.branch)}`:""}</div>
+      <div>Reviewer</div><div><b>${esc(S.name||"Not given")}</b>${S.role?` · ${esc(S.role)}`:""}${S.branch?` · ${esc(S.branch)}`:""}</div>
       <div>Levels reviewed</div><div>${S.levels.length?esc(S.levels.map(l=>l.replace("Level ","")).join(", ")):"Not given"}</div>
       <div>Date</div><div>${today}</div>
       <div>Points</div><div><b>${pts.length}</b> · ${PRIOS.map(([l])=>`${cnt(pts,l)} ${l.toLowerCase()}`).join(" · ")}</div>
@@ -508,10 +503,10 @@ function blocks(){
   Object.keys(by).forEach(l=>{
     out.push(`<div class="pb lv"><div class="lvl">${esc(l)} · ${by[l].length} point${by[l].length>1?"s":""}</div></div>`);
     by[l].forEach(p=>out.push(`<div class="pb"><div class="pt">
-      <div class="pt-top"><span class="pg">Page ${esc(p.page)}</span><span class="tag">${esc(p.part)}</span>${p.type?`<span class="tag">${esc(p.type)}</span>`:""}<span class="tag ${PRIO_CLASS[p.priority]}">${esc(p.priority)}</span><span class="num">Point ${p.n}</span></div>
+      <div class="pt-top"><span class="pg">${p.page?`Page ${esc(p.page)}`:"No page given"}</span><span class="tag">${esc(p.part)}</span>${p.type?`<span class="tag">${esc(p.type)}</span>`:""}<span class="tag ${PRIO_CLASS[p.priority]}">${esc(p.priority)}</span><span class="num">Point ${p.n}</span></div>
       ${p.exercise?`<div style="margin-bottom:8px"><div class="lab">Exercise or example</div><div class="txt" dir="auto">${esc(p.exercise)}</div></div>`:""}
-      <div class="cols"><div><div class="lab">What's wrong</div><div class="txt" dir="auto">${esc(p.wrong)}</div></div>
-      <div><div class="lab">Suggested fix</div><div class="txt" dir="auto">${esc(p.fix)}</div></div></div>
+      <div class="cols"><div><div class="lab">What's wrong</div><div class="txt" dir="auto">${esc(p.wrong)||"—"}</div></div>
+      <div><div class="lab">Suggested fix</div><div class="txt" dir="auto">${esc(p.fix)||"—"}</div></div></div>
       ${p.photos.length?`<div class="pics">${p.photos.map((ph,j)=>`<figure><img src="${ph.src}"><figcaption>Photo ${j+1}</figcaption></figure>`).join("")}</div>`:""}
     </div></div>`));
   });
